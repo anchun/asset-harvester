@@ -3,9 +3,9 @@
 
 
 [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://research.nvidia.com/labs/sil/projects/asset-harvester/)
-[![Paper](https://img.shields.io/badge/arXiv-Paper-b31b1b?logo=arxiv)](https://arxiv.org/abs/2604.18468)
+[![Paper](https://img.shields.io/badge/arXiv-Paper-b31b1b?logo=arxiv)](https://arxiv.org/pdf/2604.18468)
 [![License](https://img.shields.io/badge/License-Apache--2.0-orange)](LICENSE.txt)
-[![Model](https://img.shields.io/badge/HF-Models-yellow?logo=huggingface&style=flat-square)](https://huggingface.co/nvidia/asset-harvester)[![Live Demo](https://img.shields.io/badge/Live%20Demo!-ff6f00?logoColor=white&style=flat-square)](https://huggingface.co/spaces/nvidia/asset-harvester)[![NCore Data](https://img.shields.io/badge/NCore-0d9488?logo=database&logoColor=white&style=flat-square)](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles-NCore)[![Benchmark](https://img.shields.io/badge/Benchmark-4f46e5?logoColor=white&style=flat-square)](https://huggingface.co/datasets/nvidia/NuRec-AV-Object-Benchmark)
+[![Model](https://img.shields.io/badge/HF-Models-yellow?logo=huggingface&style=flat-square)](https://huggingface.co/nvidia/asset-harvester)[![Live Demo!](https://img.shields.io/badge/Live%20Demo!-cd3233?logo=database&logoColor=white&style=flat-square)](https://huggingface.co/spaces/nvidia/asset-harvester)[![NCore Data](https://img.shields.io/badge/NCore-0d9488?logo=database&logoColor=white&style=flat-square)](https://huggingface.co/datasets/nvidia/PhysicalAI-Autonomous-Vehicles-NCore)[![Benchmark](https://img.shields.io/badge/Benchmark-4f46e5?logoColor=white&style=flat-square)](https://huggingface.co/datasets/nvidia/NuRec-AV-Object-Benchmark)
 
 **NVIDIA**
 
@@ -167,16 +167,39 @@ python3 run_inference.py \
 <details>
 <summary><b>Full End-to-End Workflow</b></summary>
 
-For the complete step-by-step pipeline walkthrough — from raw NCore driving logs through NCore parsing, multiview diffusion, Gaussian lifting, and metadata generation — see the **[End-to-End Guide](docs/end_to_end_example.md)**.
+For the complete step-by-step pipeline walkthrough — from raw NCore driving logs through NCore parsing, multiview diffusion, Gaussian lifting, metadata generation, and benchmark evaluation — see the **[End-to-End Guide](docs/end_to_end_example.md)**.
 
 </details>
-
 
 
 <a id="benchmark"></a>
 <details>
 <summary><b>Benchmark</b></summary>
-Coming soon
+
+Evaluate `run_inference.py` output by rendering Gaussian splat assets from reserved-view cameras and comparing to ground-truth frames. Computes **PSNR**, **LPIPS**, **SSIM**, and optional **DINOv3 embedding** distances.
+
+#### Setup
+
+Install benchmark evaluation dependencies and download third-party model weights required for evaluation. The script requires Hugging Face access to `facebook/dinov3-vith16plus-pretrain-lvd1689m` and `facebook/sam-3d-body-dinov3`.
+
+Note that the benchmark environment needs `transformers>=4.56.0`, while the main asset-harvester environment uses `transformers==4.48.3`. Therefore, we clone the environment into a separate benchmark environment and install the updated dependencies.
+```bash
+conda create --name av-object-benchmark --clone asset-harvester
+
+conda activate av-object-benchmark 
+bash benchmark/install.sh
+```
+
+This installs benchmark-specific packages (`pytorch-lightning`, `yacs`, `ninja`, `termcolor`, `transformers>=4.56.0`), clones the SAM 3D Body repo, and downloads the SAM 3D Body and DINOv3 checkpoints. If the third-party checkpoints are unavailable (gated repo), eval still runs but skips embedding metrics.
+
+#### Usage
+
+```bash
+python benchmark/eval.py --output_dir /path/to/run_inference_output --eval_output_dir benchmark/eval
+```
+
+See [`benchmark/README.md`](benchmark/README.md) for the full list of options, input/output format, and metric descriptions.
+
 </details>
 
 
@@ -193,7 +216,12 @@ asset-harvester/
 │   ├── patches/                     # Compatibility patches
 │   ├── tokengs/                     # TokenGS package + main.py training entry point
 │   └── utils/                       # Shared utilities and CLI helpers
-├── benchmark/                       # Evaluation tools (coming soon)
+├── benchmark/                       # Evaluation tools
+│   ├── eval.py
+│   ├── embedding_metrics.py
+│   ├── utils.py
+│   ├── install.sh
+│   └── README.md
 ├── data_samples/                    # Bundled sample data for Quick Start
 ├── docs/
 │   ├── assets/                      # Demo images, GIFs, and videos

@@ -77,6 +77,13 @@ To use Asset Harvester with a NuRec reconstruction, generate a `metadata.yaml` f
 python asset_harvester/utils/generate_external_assets_metadata.py --input-dir ./outputs/ncore_harvest
 ```
 
+**Note:**
+
+- **Please disable PPISP when reconstructing the 3D scene with NuRec. PPISP can introduce color-space mismatches, which lead to object over-saturation after insertion.**
+
+- **Asset Harvester does not predict object scale. Asset insertion uses the object scales stored in metadata extracted from the original data clip. If object scale looks incorrect after insertion, please debug the source clip cuboid dimensions and the insertion code.**
+
+
 If you need to regenerate masks for direct image inputs, prefer the module entry point:
 
 ```bash
@@ -93,3 +100,20 @@ python asset_harvester/utils/image_segment.py --help
 |----------|---------|-------------|
 | `--input-dir` | *(required)* | Root of the input directory (lifting output) |
 
+## Benchmark Evaluation
+
+After running step 2 with lifting, evaluate Gaussian reconstructions against ground truth views. Requires sample data that includes held-out views (e.g. `data_samples/rectified_AV_objects/`):
+
+```bash
+conda activate av-object-benchmark
+python benchmark/eval.py --output_dir outputs
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--output_dir` | *(required)* | Root output directory from run_inference |
+| `--eval_output_dir` | `<output_dir>/eval` | Where to write eval results |
+| `--output_size` | 512 | Render resolution |
+| `--no_comparisons` | off | Skip saving comparison images |
+
+Results are summarized in `rendering_metrics_summary.txt` under the eval output directory.

@@ -18,6 +18,11 @@ pip install --extra-index-url https://download.pytorch.org/whl/cu128 \
 After install, the training entry point is available as `tokengs-train`, backed by
 `asset_harvester/tokengs/main.py`.
 
+## Evaluation
+
+See the [benchmark evaluation guide](../../docs/end_to_end_example.md#benchmark-evaluation) in the main repo.
+
+
 ## Citation
 
 If you use TokenGS in your research, please cite:
