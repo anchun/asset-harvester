@@ -7,7 +7,7 @@
 Forward mode:
   gaussians.ply -> gaussians_sim.ply
   Rescales normalized 3DGS assets to real-world dimensions using lwh.txt and
-  converts coordinates from (x-right, y-down, z-forward) to
+  converts coordinates from (x-right, y-up, z-backward) to
   (x-forward, y-left, z-up).
 
 Reverse mode:
@@ -34,19 +34,19 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "models", "tokengs"))
 from asset_harvester.tokengs.ply_io import read_ply, write_ply
 
-# Coordinate transform: (x-right, y-down, z-forward) -> (x-forward, y-left, z-up)
-#   new_x = old_z,  new_y = -old_x,  new_z = -old_y
+# Coordinate transform: (x-right, y-up, z-backward) -> (x-forward, y-left, z-up)
+#   new_x = -old_z,  new_y = -old_x,  new_z = old_y
 _COORD_TRANSFORM = np.array(
-    [[0, 0, 1],
+    [[0, 0, -1],
      [-1, 0, 0],
-     [0, -1, 0]],
+     [0, 1, 0]],
     dtype=np.float64,
 )
 _COORD_TRANSFORM_INV = _COORD_TRANSFORM.T
 
 # Unit quaternion for _COORD_TRANSFORM in (w, x, y, z) order.
-_COORD_TRANSFORM_QUAT_WXYZ = np.array([0.5, -0.5, 0.5, -0.5], dtype=np.float64)
-_COORD_TRANSFORM_INV_QUAT_WXYZ = np.array([0.5, 0.5, -0.5, 0.5], dtype=np.float64)
+_COORD_TRANSFORM_QUAT_WXYZ = np.array([0.5, 0.5, -0.5, -0.5], dtype=np.float64)
+_COORD_TRANSFORM_INV_QUAT_WXYZ = np.array([0.5, -0.5, 0.5, 0.5], dtype=np.float64)
 
 
 def _quat_multiply_wxyz(lhs: np.ndarray, rhs: np.ndarray) -> np.ndarray:
@@ -129,7 +129,7 @@ def rescale_ply(ply_path: str, lwh_path: str, out_path: str) -> None:
     for k in ("scale_0", "scale_1", "scale_2"):
         props[k] = props[k] + log_sf
 
-    # 3. Convert coordinates: (x-right, y-down, z-forward) -> (x-forward, y-left, z-up).
+    # 3. Convert coordinates: (x-right, y-up, z-backward) -> (x-forward, y-left, z-up).
     _apply_coord_transform(props, _COORD_TRANSFORM)
 
     # 4. Rotate Gaussian orientations into the simulation frame.
