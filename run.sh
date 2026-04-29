@@ -186,4 +186,11 @@ python3 "${SCRIPT_DIR}/run_inference.py" \
     "${LIFTING_FLAGS[@]}" \
     "${OFFLOAD_FLAGS[@]}" \
     "${IMAGE_GUARD_FLAGS[@]+"${IMAGE_GUARD_FLAGS[@]}"}" \
-    "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"
+    "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"\
+
+# --- Rescale 3DGS assets to real-world dimensions ---
+if [ "${SKIP_LIFTING}" = false ]; then
+    echo ""
+    echo "Rescaling 3DGS assets to real-world dimensions ..."
+    python3 "${SCRIPT_DIR}/asset_harvester/utils/rescale_gaussians.py" --output-dir "${OUTPUT_DIR}"
+fi

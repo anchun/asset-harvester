@@ -100,6 +100,16 @@ python asset_harvester/utils/image_segment.py --help
 |----------|---------|-------------|
 | `--input-dir` | *(required)* | Root of the input directory (lifting output) |
 
+## Step 4: Rescale 3DGS Assets to Real-World Dimensions (Optional)
+
+The `gaussians.ply` files produced in Step 2 are normalized. To rescale them to real-world dimensions (using `multiview/lwh.txt`) and convert coordinates to `(x-forward, y-left, z-up)`, run:
+
+```bash
+python utils/rescale_gaussians.py --output-dir ./outputs/ncore_harvest
+```
+
+This writes a `gaussians_sim.ply` alongside each `gaussians.ply`.
+
 ## Benchmark Evaluation
 
 After running step 2 with lifting, evaluate Gaussian reconstructions against ground truth views. Requires sample data that includes held-out views (e.g. `data_samples/rectified_AV_objects/`):

@@ -79,7 +79,7 @@ ok "Active env: $(python --version) @ $(which python)"
 # ── CUDA toolkit (needed for gsplat source build) ────────────────────
 info "Installing CUDA toolkit via conda"
 set +u
-conda install -y -c nvidia cuda-toolkit=12.8
+conda install -y -c nvidia cuda-toolkit=12.9
 set -u
 ok "CUDA toolkit installed"
 
@@ -131,8 +131,8 @@ ok "Using $CC ($($CC --version | head -1))"
 # ── pip dependencies (ordered to respect implicit constraints) ────────
 # gsplat must be installed from the pinned source commit
 info "Preinstalling PyTorch CUDA wheels required for gsplat source builds"
-pip install --extra-index-url https://download.pytorch.org/whl/cu128 \
-    torch==2.10.0 torchvision
+pip install --extra-index-url https://download.pytorch.org/whl/cu129 \
+    torch==2.10.0+cu129 torchvision==0.25.0+cu129
 ok "PyTorch CUDA wheels"
 
 export CUDA_HOME="$CONDA_PREFIX"
@@ -143,7 +143,7 @@ python -c "from gsplat.cuda._backend import _C; print('gsplat CUDA ready')"
 ok "gsplat CUDA verified"
 
 info "Installing asset-harvester package with all runtime extras"
-pip install --extra-index-url https://download.pytorch.org/whl/cu128 \
+pip install --extra-index-url https://download.pytorch.org/whl/cu129 \
     -e "${REPO_DIR}[ncore-parser,multiview_diffusion,tokengs,camera-estimator]"
 ok "asset-harvester package"
 

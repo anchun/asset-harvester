@@ -31,8 +31,8 @@ ncore-parser = [
     "nvidia-ncore",
 ]
 multiview_diffusion = [
-    "torch==2.10.0",
-    "torchvision",
+    "torch==2.10.0+cu129",
+    "torchvision==0.25.0+cu129",
     "diffusers>=0.33.0,<0.37.0",
     "transformers==4.48.3",
     "safetensors",
