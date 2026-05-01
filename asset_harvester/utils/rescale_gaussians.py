@@ -17,8 +17,8 @@ Reverse mode:
   lwh.txt or any other sidecar file.
 
 Usage:
-    python utils/rescale_gaussians.py --output-dir <harvest_output_dir>
-    python utils/rescale_gaussians.py --output-dir <harvest_output_dir> --mode reverse
+    python utils/rescale_gaussians.py --input-dir <harvest_output_dir>
+    python utils/rescale_gaussians.py --input-dir <harvest_output_dir> --mode reverse
 """
 
 from __future__ import annotations
@@ -167,7 +167,7 @@ def main() -> None:
         description="Convert 3DGS assets between normalized NuRec and simulation coordinate frames"
     )
     parser.add_argument(
-        "--output-dir",
+        "--input-dir",
         required=True,
         help="Harvest output directory (contains <class>/<id>/ sub-folders).",
     )
@@ -179,7 +179,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    root = Path(args.output_dir)
+    root = Path(args.input_dir)
     if not root.is_dir():
         print(f"ERROR: {root} is not a directory", file=sys.stderr)
         sys.exit(1)

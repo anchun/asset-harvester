@@ -31,7 +31,7 @@ Required:
                           Supports .zarr.itar globs and clip .json manifests
 
 Optional:
-  --output-path           Output directory (default: outputs/ncore_parser/)
+  --output-path           Output directory (default: outputs/ncore_parser/<clip_uuid>)
   --segmentation-ckpt     Mask2Former JIT checkpoint
                           (default: checkpoints/AH_object_seg_jit.pt)
   --camera-ids            Comma-separated camera sensor IDs
@@ -49,7 +49,7 @@ EOF
 }
 
 COMPONENT_STORE=""
-OUTPUT_PATH="${AH_PUBLIC_DIR}/outputs/ncore_parser"
+OUTPUT_PATH=""
 SEG_CKPT="${AH_PUBLIC_DIR}/checkpoints/AH_object_seg_jit.pt"
 CAMERA_IDS=""
 TRACK_IDS=""
@@ -71,6 +71,13 @@ if [ -z "${COMPONENT_STORE}" ]; then
     echo "ERROR: --component-store is required"
     echo ""
     usage 1
+fi
+
+# Derive default output path with clip UUID from component-store
+if [ -z "${OUTPUT_PATH}" ]; then
+    # Extract clip UUID from the component-store path (parent directory name)
+    CLIP_UUID="$(basename "$(dirname "${COMPONENT_STORE}")")"
+    OUTPUT_PATH="${AH_PUBLIC_DIR}/outputs/ncore_parser/${CLIP_UUID}"
 fi
 
 if [ ! -f "${SEG_CKPT}" ]; then

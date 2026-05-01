@@ -37,7 +37,7 @@ Options:
   --lifting-ckpt      Path to TokenGS .safetensors checkpoint
                       (default: checkpoints/AH_tokengs_lifting.safetensors)
   --output-dir        Output directory (default: outputs/)
-  --num-steps         Number of diffusion inference steps (default: 30)
+  --num-steps         Number of diffusion inference steps (default: 50)
   --cfg-scale         Classifier-free guidance scale (default: 2.0)
   --max-samples       Max samples to process, 0 = all (default: 0)
   --skip-lifting      Disable TokenGS Gaussian lifting (multiview only)
@@ -91,7 +91,7 @@ done
 # --- Resolve defaults ---
 
 [ -z "${DIFFUSION_CKPT}" ] && DIFFUSION_CKPT="${SCRIPT_DIR}/checkpoints/AH_multiview_diffusion.safetensors"
-[ -z "${NUM_STEPS}" ] && NUM_STEPS=30
+[ -z "${NUM_STEPS}" ] && NUM_STEPS=50
 [ -z "${CFG_SCALE}" ] && CFG_SCALE=2.0
 
 # --- Validate inputs ---
@@ -192,5 +192,5 @@ python3 "${SCRIPT_DIR}/run_inference.py" \
 if [ "${SKIP_LIFTING}" = false ]; then
     echo ""
     echo "Rescaling 3DGS assets to real-world dimensions ..."
-    python3 "${SCRIPT_DIR}/asset_harvester/utils/rescale_gaussians.py" --output-dir "${OUTPUT_DIR}"
+    python3 "${SCRIPT_DIR}/asset_harvester/utils/rescale_gaussians.py" --input-dir "${OUTPUT_DIR}"
 fi
