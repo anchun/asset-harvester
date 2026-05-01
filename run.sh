@@ -194,3 +194,6 @@ if [ "${SKIP_LIFTING}" = false ]; then
     echo "Rescaling 3DGS assets to real-world dimensions ..."
     python3 "${SCRIPT_DIR}/asset_harvester/utils/rescale_gaussians.py" --input-dir "${OUTPUT_DIR}"
 fi
+
+# --- Mark processing complete ---
+touch "${OUTPUT_DIR}/.processed"

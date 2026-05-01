@@ -106,10 +106,18 @@ PASS_ARGS=()
 
 FAILED=0
 PROCESSED=0
+SKIPPED=0
 
 for clip_dir in "${CLIPS[@]}"; do
     clip_name=$(basename "${clip_dir}")
     PROCESSED=$(( PROCESSED + 1 ))
+
+    # Skip already processed clips
+    if [ -f "${OUTPUT_DIR}/${clip_name}/.processed" ]; then
+        echo "[${PROCESSED}/${NUM_CLIPS}] Skipping (already processed): ${clip_name}"
+        SKIPPED=$(( SKIPPED + 1 ))
+        continue
+    fi
 
     echo "[${PROCESSED}/${NUM_CLIPS}] Processing: ${clip_name}"
 
@@ -126,4 +134,4 @@ for clip_dir in "${CLIPS[@]}"; do
     echo ""
 done
 
-echo "Batch complete. Processed: ${PROCESSED}, Failed: ${FAILED}"
+echo "Batch complete. Processed: ${PROCESSED}, Skipped: ${SKIPPED}, Failed: ${FAILED}"
