@@ -20,11 +20,19 @@ Typical usage
 Behavior with ``--confidence-threshold`` enabled:
 
 - keep a sample if ``mean_target_confidence >= threshold``
-- keep a sample in its original class if ``majority_predicted_class`` still
-    matches the original class and ``mean_predicted_confidence > threshold``
-- redirect a sample to the predicted class directory if
-    ``majority_predicted_class`` differs from the original class and
-    ``mean_predicted_confidence > threshold``
+- if ``mean_target_confidence < threshold`` and
+    ``majority_predicted_class == original_class`` and
+    ``mean_predicted_confidence > threshold``, keep it in the original class
+- if ``mean_target_confidence < threshold`` and
+    ``majority_predicted_class == other_vehicle`` and
+    ``original_class`` is one of ``automobile``, ``heavy_truck``, ``trailer`` and
+    ``mean_predicted_confidence > threshold``, keep it in the original class
+- if ``mean_target_confidence < threshold`` and
+    ``majority_predicted_class`` is a non-empty class different from
+    ``original_class`` and not ``other_vehicle``, and
+    ``mean_predicted_confidence > threshold``, redirect to
+    ``majority_predicted_class``
+- otherwise skip the sample
 """
 
 from __future__ import annotations
@@ -50,6 +58,7 @@ _UUID_PATTERN = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
 _CONFIDENCE_METRIC = "mean_target_confidence"
+_OTHER_VEHICLE_KEEP_ORIGINAL = {"automobile", "heavy_truck", "trailer"}
 
 
 class ConfidenceEntry(dict):
@@ -277,16 +286,28 @@ def _filter_candidates_by_confidence(
         majority_predicted_class = entry.get("majority_predicted_class")
         predicted_score = float(entry.get("predicted_metric_value", 0.0))
         original_class = entry.get("original_class")
+        should_keep_original = (
+            isinstance(majority_predicted_class, str)
+            and majority_predicted_class == original_class
+            and predicted_score > threshold
+        )
+
+        other_vehicle_keep_original = (
+            isinstance(majority_predicted_class, str)
+            and majority_predicted_class == "other_vehicle"
+            and isinstance(original_class, str)
+            and original_class in _OTHER_VEHICLE_KEEP_ORIGINAL
+            and predicted_score > threshold
+        )
+        if other_vehicle_keep_original:
+            should_keep_original = True
+
         should_redirect = (
             isinstance(majority_predicted_class, str)
             and majority_predicted_class
             and predicted_score > threshold
             and majority_predicted_class != original_class
-        )
-        should_keep_original = (
-            isinstance(majority_predicted_class, str)
-            and majority_predicted_class == original_class
-            and predicted_score > threshold
+            and majority_predicted_class != "other_vehicle"
         )
         if should_redirect:
             redirect_groups[asset_dir] = majority_predicted_class
