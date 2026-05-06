@@ -161,28 +161,25 @@ python asset_harvester/utils/image_segment.py --help
 |----------|---------|-------------|
 | `--input-dir` | *(required)* | Root of the input directory (lifting output) |
 
-## Step 4: Rescale 3DGS Assets to Real-World Dimensions (Optional)
+## Step 4: Collect Simulation Assets (Optional)
 
-The `gaussians.ply` files produced in Step 2 are normalized. To rescale them to real-world dimensions (using `multiview/lwh.txt`) and convert coordinates to `(x-forward, y-left, z-up)`, run:
+After Step 2 finishes, you can gather `gaussians_sim.ply` outputs into a single simulation-asset directory and optionally apply the CLIP confidence filter.
 
-```bash
-python asset_harvester/utils/rescale_gaussians.py --input-dir ./outputs/ncore_harvest/<clip_uuid>
-```
-
-This writes a `gaussians_sim.ply` alongside each `gaussians.ply`.
-
-### Batch Processing
-
-To rescale all clips under a directory in batch:
+Preferred shell entry point:
 
 ```bash
-bash scripts/batch_rescale_gaussians.sh --input-dir ./outputs/ncore_harvest
+bash scripts/collect_sim_assets.sh \
+    --input-dir ./outputs/ncore_harvest/<clip_uuid> \
+    --output-dir ./outputs/assets \
+    --confidence-threshold 0.7
 ```
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--input-dir` | `outputs/ncore_harvest` | Base directory containing per-clip harvest outputs |
-| `--mode` | `forward` | `forward`: gaussians.ply → gaussians_sim.ply; `reverse`: gaussians_sim.ply → gaussians_nurec.ply |
+| `--input-dir` | `outputs/ncore_harvest` | Harvest output directory to scan for `gaussians_sim.ply` |
+| `--output-dir` | `outputs/assets` | Destination directory for collected simulation assets |
+| `--confidence-threshold` | `0.7` | Optional CLIP-based threshold for filtering and class redirection |
+| `--limit` | all | Optional cap on how many assets to collect after sorting |
 
 ## Benchmark Evaluation
 

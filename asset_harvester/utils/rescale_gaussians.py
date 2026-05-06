@@ -19,6 +19,15 @@ Reverse mode:
 Usage:
     python utils/rescale_gaussians.py --input-dir <harvest_output_dir>
     python utils/rescale_gaussians.py --input-dir <harvest_output_dir> --mode reverse
+
+Workflow notes:
+        - run.sh already invokes this script in forward mode after lifting, so
+            gaussians_sim.ply is produced automatically for standard --data-root runs.
+        - Use this script directly when you need to re-run the forward conversion or
+            when you want the reverse conversion back to gaussians_nurec.ply.
+
+Batch example:
+        bash scripts/batch_rescale_gaussians.sh --input-dir ./outputs/ncore_harvest
 """
 
 from __future__ import annotations
@@ -31,7 +40,9 @@ from pathlib import Path
 import numpy as np
 
 # Re-use the project's own PLY I/O to avoid extra dependencies.
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "models", "tokengs"))
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 from asset_harvester.tokengs.ply_io import read_ply, write_ply
 
 # Coordinate transform: (x-right, y-up, z-backward) -> (x-forward, y-left, z-up)
@@ -164,7 +175,23 @@ def inverse_rescale_ply(ply_path: str, out_path: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Convert 3DGS assets between normalized NuRec and simulation coordinate frames"
+                description="Convert 3DGS assets between normalized NuRec and simulation coordinate frames",
+                formatter_class=argparse.RawDescriptionHelpFormatter,
+                epilog="""
+Examples:
+
+    python asset_harvester/utils/rescale_gaussians.py \
+            --input-dir ./outputs/ncore_harvest/<clip_uuid>
+
+    python asset_harvester/utils/rescale_gaussians.py \
+            --input-dir ./outputs/ncore_harvest/<clip_uuid> \
+            --mode reverse
+
+Notes:
+    - run.sh already calls this script in forward mode after lifting.
+    - forward mode writes gaussians_sim.ply next to gaussians.ply.
+    - reverse mode writes gaussians_nurec.ply next to gaussians_sim.ply.
+""",
     )
     parser.add_argument(
         "--input-dir",

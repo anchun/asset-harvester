@@ -83,6 +83,7 @@ camera-estimator = [
 [project.scripts]
 ncore-parser = "asset_harvester.ncore_parser.__main__:main"
 tokengs-train = "asset_harvester.tokengs.main:main"
+clip-confidence = "asset_harvester.utils.postprocess_clip_confidence:main"
 
 [tool.setuptools.packages.find]
 include = ["asset_harvester*"]

@@ -63,6 +63,7 @@ NUM_STEPS=""
 CFG_SCALE=""
 MAX_SAMPLES=0
 SKIP_LIFTING=false
+SKIP_CLIP_POSTPROCESS=false
 OFFLOAD=false
 ENABLE_IMAGE_GUARD=false
 IMAGE_GUARD_THRESHOLD=""
@@ -80,6 +81,7 @@ while [[ $# -gt 0 ]]; do
         --cfg-scale)        CFG_SCALE="$2"; shift 2 ;;
         --max-samples)      MAX_SAMPLES="$2"; shift 2 ;;
         --skip-lifting)     SKIP_LIFTING=true; shift ;;
+        --skip-clip-postprocess) SKIP_CLIP_POSTPROCESS=true; shift ;;
         --offload)          OFFLOAD=true; shift ;;
         --enable-image-guard) ENABLE_IMAGE_GUARD=true; shift ;;
         --image-guard-threshold) IMAGE_GUARD_THRESHOLD="$2"; shift 2 ;;
@@ -138,6 +140,13 @@ if [ "${SKIP_LIFTING}" = true ]; then
 else
     echo "Lifting checkpoint:   ${LIFTING_CKPT}"
 fi
+if [ "${SKIP_CLIP_POSTPROCESS}" = true ]; then
+    echo "CLIP postprocess:     DISABLED"
+elif [ -n "${IMAGE_DIR}" ]; then
+    echo "CLIP postprocess:     SKIPPED for --image-dir outputs"
+else
+    echo "CLIP postprocess:     ENABLED"
+fi
 if [ "${ENABLE_IMAGE_GUARD}" = true ]; then
     echo "Image guard:          ENABLED"
     echo "Guard threshold:      ${IMAGE_GUARD_THRESHOLD:-0.5}"
@@ -187,6 +196,16 @@ python3 "${SCRIPT_DIR}/run_inference.py" \
     "${OFFLOAD_FLAGS[@]}" \
     "${IMAGE_GUARD_FLAGS[@]+"${IMAGE_GUARD_FLAGS[@]}"}" \
     "${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}"\
+
+# --- CLIP confidence postprocess ---
+if [ "${SKIP_CLIP_POSTPROCESS}" = false ] && [ -z "${IMAGE_DIR}" ]; then
+    echo ""
+    echo "Running CLIP confidence postprocess ..."
+    python3 -m asset_harvester.utils.postprocess_clip_confidence --input-dir "${OUTPUT_DIR}"
+elif [ -n "${IMAGE_DIR}" ]; then
+    echo ""
+    echo "Skipping CLIP confidence postprocess for --image-dir outputs (expects <clip>/<class>/<sample>/multiview layout)."
+fi
 
 # --- Rescale 3DGS assets to real-world dimensions ---
 if [ "${SKIP_LIFTING}" = false ]; then
