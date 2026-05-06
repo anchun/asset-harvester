@@ -113,12 +113,29 @@ bash scripts/batch_run.sh --input-dir ./outputs/ncore_parser --output-dir ./outp
 | `--skip-lifting` | off | Disable TokenGS Gaussian lifting (multiview only) |
 | `--offload` | off | Offload diffusion models to CPU during lifting |
 
-## Step 3: Generate External Assets Metadata to use with NVIDIA Omniverse NuRec (Optional)
+## Step 3: Prepare Assets for NVIDIA Omniverse NuRec Insertion (Optional)
 
-To use Asset Harvester with a NuRec reconstruction, generate a `metadata.yaml` file using the script below. The Step 2 output directory can then be used as input to the NuRec workflow for asset replacement and insertion, described [here](https://sw-docs.gitlab-master-pages.nvidia.com/av-sim/early-access/nurec/use-ah-assets.html).
+To use Asset Harvester with a NuRec reconstruction, prepare the Step 2 outputs for asset replacement and insertion, described [here](https://docs.nvidia.com/nurec/nurec/use-ah-assets.html).
+
+First, rotate the exported Gaussian PLY files into the orientation expected by the insertion workflow.
 
 ```bash
-python asset_harvester/utils/generate_external_assets_metadata.py --input-dir ./outputs/ncore_harvest/<clip_uuid>
+python -m asset_harvester.utils.orient_gaussians_for_nurec \
+    --input-dir ./outputs/ncore_harvest/<clip_uuid> \
+    --output-dir ./outputs/ncore_harvest_nurec/<clip_uuid>
+```
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--input-dir` | *(required)* | Step 2 output directory |
+| `--output-dir` | *(optional)* | Transformed copy to create for NuRec insertion |
+| `--in-place` | off | Overwrite `gaussians.ply` files under `--input-dir` instead of creating a copy |
+| `--degrees` | 90 | Y-axis rotation to apply |
+
+Then generate `metadata.yaml` from the oriented output directory. The resulting directory can be used as the NuRec external assets input.
+
+```bash
+python asset_harvester/utils/generate_external_assets_metadata.py --input-dir ./outputs/ncore_harvest_nurec/<clip_uuid>
 ```
 
 **Note:**
