@@ -52,6 +52,14 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from asset_harvester.tokengs.ply_io import read_ply
+from asset_harvester.utils.filter_orientation import (
+    DEFAULT_MODEL_NAME as _ORIENTATION_MODEL_NAME,
+    OrientationScorer,
+    SampleEntry,
+    _check_sample,
+    _DEFAULT_REAR_VIEWS,
+    _DEFAULT_FRONT_VIEWS,
+)
 
 
 _UUID_PATTERN = re.compile(
@@ -176,6 +184,40 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=0.7,
         help="If set, only collect assets whose sample entry in confidence.json meets or exceeds this threshold.",
+    )
+    parser.add_argument(
+        "--lwh-threshold",
+        type=float,
+        default=0.3,
+        help=(
+            "If set, filter out assets whose LWH aspect-ratio deviation exceeds "
+            "this threshold (e.g. 0.3 = 30%%). Compares L/W from multiview/lwh.txt "
+            "with extent_z/extent_x from gaussians.ply to detect orientation errors "
+            "(catches 45deg/90deg yaw rotation). Also enables the CLIP pairwise "
+            "check for 180deg flips unless --skip-orientation-clip is specified."
+        ),
+    )
+    parser.add_argument(
+        "--skip-orientation-clip",
+        action="store_true",
+        default=False,
+        help=(
+            "When --lwh-threshold is active, skip the CLIP-based 180deg flip check "
+            "and only run the fast LWH geometry check."
+        ),
+    )
+    parser.add_argument(
+        "--orientation-model",
+        default=_ORIENTATION_MODEL_NAME,
+        help=(
+            "Hugging Face CLIP model ID for orientation checking "
+            f"(default: {_ORIENTATION_MODEL_NAME})."
+        ),
+    )
+    parser.add_argument(
+        "--orientation-device",
+        default=None,
+        help="Torch device for orientation CLIP model (default: cuda if available, else cpu).",
     )
     return parser.parse_args()
 
@@ -452,6 +494,59 @@ def render_thumbnail(
     cv2.imwrite(str(thumbnail_path), cv2.cvtColor(thumb, cv2.COLOR_RGB2BGR))
 
 
+def _filter_candidates_by_orientation(
+    candidates: list[Path],
+    lwh_threshold: float,
+    scorer: "OrientationScorer | None",
+    input_dir: Path,
+) -> tuple[list[Path], list[tuple[Path, str]]]:
+    """Filter candidates by full orientation check (LWH + CLIP 180deg).
+
+    Runs both checks via ``_check_sample`` from filter_orientation:
+      - LWH aspect-ratio check (detects 45deg/90deg yaw rotation)
+      - CLIP pairwise check (detects 180deg front/rear flip)
+    """
+    filtered: list[Path] = []
+    skipped: list[tuple[Path, str]] = []
+
+    for ply_path in candidates:
+        sample_dir = ply_path.parent
+        # Infer class name from directory structure: <clip>/<class>/<sample_id>/
+        class_name = sample_dir.parent.name if sample_dir.parent != input_dir else "unknown"
+        clip_dir = sample_dir.parent.parent
+
+        entry = SampleEntry(
+            sample_dir=sample_dir,
+            class_name=class_name,
+            clip_dir=clip_dir,
+        )
+        result = _check_sample(
+            entry,
+            scorer=scorer,
+            rear_views=list(_DEFAULT_REAR_VIEWS),
+            front_views=list(_DEFAULT_FRONT_VIEWS),
+            lwh_threshold=lwh_threshold,
+        )
+
+        if result.passed:
+            filtered.append(ply_path)
+        else:
+            # Build reason string
+            reasons = []
+            if not result.lwh_check.passed and result.lwh_check.available:
+                reasons.append(
+                    f"LWH deviation {result.lwh_check.deviation:.1%} > {lwh_threshold:.0%} "
+                    f"(exp L/W={result.lwh_check.expected_ratio:.2f}, act z/x={result.lwh_check.actual_ratio:.2f})"
+                )
+            if not result.clip_passed:
+                reasons.append("CLIP 180deg flip detected")
+            reason = "; ".join(reasons) if reasons else "orientation check failed"
+            skipped.append((ply_path, reason))
+            print(f"Orientation filter: SKIP {ply_path}: {reason}")
+
+    return filtered, skipped
+
+
 def collect_assets(
     input_dir: Path,
     output_dir: Path,
@@ -460,6 +555,10 @@ def collect_assets(
     max_points: int,
     thumbnail_frame: int,
     confidence_threshold: float | None,
+    lwh_threshold: float | None = None,
+    skip_orientation_clip: bool = False,
+    orientation_model: str = _ORIENTATION_MODEL_NAME,
+    orientation_device: str | None = None,
 ) -> int:
     candidates = sorted(input_dir.rglob("gaussians_sim.ply"))
     if not candidates:
@@ -486,6 +585,31 @@ def collect_assets(
             )
         if not candidates:
             print("No assets remain after confidence filtering.")
+            return 0
+
+    skipped_by_orientation: list[tuple[Path, str]] = []
+    if lwh_threshold is not None:
+        # Load CLIP scorer for 180° flip detection (unless skipped)
+        scorer: OrientationScorer | None = None
+        if not skip_orientation_clip:
+            print(f"Loading orientation CLIP model {orientation_model!r}...")
+            scorer = OrientationScorer(model_name=orientation_model, device=orientation_device)
+            print("Orientation model loaded.")
+
+        candidates, skipped_by_orientation = _filter_candidates_by_orientation(
+            candidates,
+            lwh_threshold=lwh_threshold,
+            scorer=scorer,
+            input_dir=input_dir,
+        )
+        checks = "LWH + CLIP" if scorer else "LWH only"
+        print(
+            f"Orientation filter ({checks}): kept {len(candidates)} asset(s)"
+        )
+        if skipped_by_orientation:
+            print(f"Orientation filter: skipped {len(skipped_by_orientation)} asset(s)")
+        if not candidates:
+            print("No assets remain after orientation filtering.")
             return 0
 
     if limit is not None:
@@ -537,6 +661,13 @@ def collect_assets(
             print(f"  MOVE {asset_dir} -> {target_class}/")
         if len(redirected_groups) > len(preview):
             print(f"  ... {len(redirected_groups) - len(preview)} more redirected asset(s)")
+    if skipped_by_orientation:
+        preview = skipped_by_orientation[:5]
+        print("Orientation filter examples:")
+        for ply_path, reason in preview:
+            print(f"  SKIP {ply_path}: {reason}")
+        if len(skipped_by_orientation) > len(preview):
+            print(f"  ... {len(skipped_by_orientation) - len(preview)} more filtered asset(s)")
     return collected
 
 
@@ -562,6 +693,10 @@ def main() -> None:
         max_points=args.max_points,
         thumbnail_frame=args.thumbnail_frame,
         confidence_threshold=args.confidence_threshold,
+        lwh_threshold=args.lwh_threshold,
+        skip_orientation_clip=args.skip_orientation_clip,
+        orientation_model=args.orientation_model,
+        orientation_device=args.orientation_device,
     )
 
 

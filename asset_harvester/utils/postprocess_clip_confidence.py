@@ -54,7 +54,7 @@ if TYPE_CHECKING:
     import torch
 
 
-DEFAULT_MODEL_NAME = "openai/clip-vit-base-patch32"
+DEFAULT_MODEL_NAME = "openai/clip-vit-large-patch14-336"
 DEFAULT_OUTPUT_NAME = "confidence.json"
 DEFAULT_PROMPT_TEMPLATE = "a photo of a {}"
 DEFAULT_CLASS_VOCAB = [
